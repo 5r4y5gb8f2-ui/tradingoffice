@@ -13,7 +13,7 @@ header{position:sticky;top:0;z-index:5;background:rgba(11,14,20,.95);backdrop-fi
 .brand{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .brand h1{font-size:17px;margin:0;letter-spacing:.2px}.brand h1 span{color:var(--mut);font-weight:500;font-size:12px;margin-left:6px;border:1px solid var(--line);padding:1px 6px;border-radius:6px}
 #status{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:12.5px;flex-wrap:wrap}
-.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--mut)}.dot.live{background:var(--pos);box-shadow:0 0 0 3px rgba(47,212,122,.18)}.dot.warn{background:var(--warn)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--mut)}.dot.live{background:var(--pos);box-shadow:0 0 0 3px rgba(47,212,122,.18)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--neg)}.hint.warnc{border-color:#5a4a20;background:#1f1a0e}
 .tools{display:flex;gap:6px;margin-top:8px}
 .btn{border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:10px;padding:9px 12px;font:600 13px system-ui;flex:1;cursor:pointer}
 .btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}.btn.ghost{background:transparent}.btn.danger{border-color:#5a2730;color:var(--neg)}
@@ -36,7 +36,7 @@ main{padding:10px 10px calc(76px + env(safe-area-inset-bottom))}
 .legend{display:flex;gap:10px;font-size:12px;color:var(--mut)}.legend i,.sw{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .events,.trades,.feed{list-style:none;margin:0;padding:0}
 .events li{padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}.events time{color:var(--mut);margin-right:6px;font-variant-numeric:tabular-nums}
-.events li.win{color:#bff3d6}.events li.loss{color:#ffc7cd}.events li.warn{color:#ffe1a6}
+.events code{word-break:break-all;font-size:11px;color:#c9cfdb}.events li.win{color:#bff3d6}.events li.loss{color:#ffc7cd}.events li.warn{color:#ffe1a6}
 .trades li,.feed li{padding:8px 0;border-bottom:1px solid var(--line)}.feed li.held{background:linear-gradient(90deg,rgba(79,157,255,.12),transparent)}
 .bar{height:5px;background:#0f1420;border-radius:3px;margin:5px 0;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#4f9dff,#2fd47a)}
 .chips{display:flex;gap:6px;margin-bottom:6px}.chip{border:1px solid var(--line);background:transparent;color:var(--mut);border-radius:20px;padding:5px 12px;font:600 12px system-ui}.chip.on{color:#fff;border-color:var(--acc);background:#13304a}
@@ -417,6 +417,7 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
       this.closed = [];
       this.seq = 1;
       this.kill = false;
+      this.paused = false;
       this.wallets = {};
       this.tried = {};            // strateji -> Set(mint)
       this.rejects = {};          // strateji -> {sebep: sayı}
@@ -470,7 +471,8 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
     }
 
     evaluate(t, now) {
-      if (this.kill || t.migrated) return;
+      // paused: işlem verisi yokken (ör. API anahtarı yok) fiyat bilinmez, yeni giriş yapılmaz.
+      if (this.kill || this.paused || t.migrated) return;
       const m = metrics(t, now);
       let rug;   // yalnız gerektiğinde hesapla
       for (const st of this.strategies) {
@@ -759,6 +761,16 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
   }
 
   let wsUrl = DEFAULT_WS;
+  // PumpPortal: yeni token ve mezuniyet akışı ücretsiz; token işlem akışı API anahtarı + en az 0,02 SOL'lu bağlı cüzdan ister
+  // ve 10.000 mesaj başına 0,01 SOL ücretlidir. Anahtar yalnızca bu cihazda saklanır, sayfa koduna/depoya yazılmaz.
+  const cfg = { apiKey: '', dailyBudgetSol: 0.05 };
+  const meter = { day: '', trade: 0, all: 0, budgetHit: false };
+  const COST_PER_MSG = 0.01 / 10000;
+  const todayKey = () => new Date().toISOString().slice(0, 10);
+  function meterRoll() { const d = todayKey(); if (meter.day !== d) { meter.day = d; meter.trade = 0; meter.all = 0; meter.budgetHit = false; } }
+  const costToday = () => meter.trade * COST_PER_MSG;
+  const feedOn = () => !!cfg.apiKey && !meter.budgetHit;
+  function fullUrl() { return cfg.apiKey ? wsUrl + (wsUrl.includes('?') ? '&' : '?') + 'api-key=' + encodeURIComponent(cfg.apiKey) : wsUrl; }
   const engine = new TO.Engine({ now: Date.now(), hooks: { subscribe: (m) => tx.sub(m), unsubscribe: (m) => tx.unsub(m) }, onEvent });
 
   function onEvent(ev) {
@@ -773,36 +785,53 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
   // ------------------------------------------------------------ PumpPortal bağlantısı
   const tx = {
     ws: null, state: 'kapalı', want: false, backoff: 1000, lastMsg: 0, subs: new Set(),
-    pendSub: new Set(), pendUnsub: new Set(), msgs: [], err: '',
+    pendSub: new Set(), pendUnsub: new Set(), msgs: [], err: '', fails: 0, everLive: false, firstTry: 0, server: [], reconnects: 0,
     connect() {
       this.want = true;
+      if (!this.firstTry) this.firstTry = Date.now();
       if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return;
       this.state = 'bağlanıyor';
       let ws;
-      try { ws = new WebSocket(wsUrl); } catch (e) { this.err = String(e.message || e); this.retry(); return; }
+      try { ws = new WebSocket(fullUrl()); } catch (e) { this.err = String(e.message || e); this.retry(); return; }
       this.ws = ws;
       ws.onopen = () => {
-        this.state = 'canlı'; this.backoff = 1000; this.err = ''; this.lastMsg = Date.now();
+        this.state = 'canlı'; this.backoff = 1000; this.err = ''; this.lastMsg = Date.now(); this.fails = 0; this.everLive = true;
         note('info', 'Canlı veriye bağlandı');
         this.send({ method: 'subscribeNewToken' });
         this.send({ method: 'subscribeMigration' });
         const all = [...this.subs]; this.pendSub.clear();
-        for (let i = 0; i < all.length; i += 100) this.send({ method: 'subscribeTokenTrade', keys: all.slice(i, i + 100) });
+        if (feedOn()) for (let i = 0; i < all.length; i += 100) this.send({ method: 'subscribeTokenTrade', keys: all.slice(i, i + 100) });
       };
       ws.onmessage = (e) => {
         const now = Date.now(); this.lastMsg = now; this.msgs.push(now);
         let m; try { m = JSON.parse(e.data); } catch (_) { return; }
-        if (m && m.errors) { this.err = String(m.errors).slice(0, 200); note('warn', 'Sunucu: ' + esc(this.err)); return; }
+        if (!m || typeof m !== 'object') return;
+        if (!m.mint) {   // sunucu mesajı (abonelik onayı, hata vb.): tanı için sakla
+          const txt = JSON.stringify(m).slice(0, 240);
+          if (!this.server.length || this.server[0].txt !== txt) { this.server.unshift({ t: now, txt }); this.server.length = Math.min(this.server.length, 8); }
+          if (m.errors || m.error) { this.err = String(m.errors || m.error).slice(0, 200); note('warn', 'Sunucu: ' + esc(this.err)); }
+          return;
+        }
+        meterRoll(); meter.all++;
+        if (m.txType === 'buy' || m.txType === 'sell') {
+          meter.trade++;
+          if (!meter.budgetHit && costToday() >= cfg.dailyBudgetSol) {
+            meter.budgetHit = true;
+            const k = [...this.subs]; for (let i = 0; i < k.length; i += 100) this.send({ method: 'unsubscribeTokenTrade', keys: k.slice(i, i + 100) });
+            note('warn', `Günlük veri bütçesi (${nf(cfg.dailyBudgetSol, 3)} SOL) doldu; işlem akışı yarına kadar kapalı, yeni giriş yok`);
+          }
+        }
         try { engine.ingest(m, now); } catch (err) { note('warn', 'İşleme hatası: ' + esc(err.message)); }
       };
       ws.onerror = () => { this.err = 'bağlantı hatası'; };
       ws.onclose = (e) => {
         this.ws = null;
         if (this.state === 'canlı') note('warn', `Bağlantı koptu (kod ${e.code}), yeniden bağlanılıyor`);
-        this.state = 'koptu';
+        this.state = 'koptu'; this.fails++; this.reconnects++;
         if (this.want) this.retry();
       };
     },
+    blocked() { return this.want && !this.everLive && this.state !== 'canlı' && Date.now() - this.firstTry > 10000; },
     retry() { setTimeout(() => { if (this.want) this.connect(); }, this.backoff); this.backoff = Math.min(this.backoff * 2, 30000); },
     close() { this.want = false; this.state = 'kapalı'; if (this.ws) try { this.ws.close(); } catch (_) {} },
     send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
@@ -810,6 +839,7 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
     unsub(mints) { for (const m of mints) { this.subs.delete(m); this.pendSub.delete(m); this.pendUnsub.add(m); } },
     flush() {
       if (!this.ws || this.ws.readyState !== 1) return;
+      if (!feedOn()) this.pendSub.clear();
       if (this.pendSub.size) { const k = [...this.pendSub]; this.pendSub.clear(); for (let i = 0; i < k.length; i += 100) this.send({ method: 'subscribeTokenTrade', keys: k.slice(i, i + 100) }); }
       if (this.pendUnsub.size) { const k = [...this.pendUnsub]; this.pendUnsub.clear(); for (let i = 0; i < k.length; i += 100) this.send({ method: 'unsubscribeTokenTrade', keys: k.slice(i, i + 100) }); }
     },
@@ -818,7 +848,7 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
 
   // ------------------------------------------------------------ kayıt
   function save() {
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ engine: engine.serialize(), wsUrl, startedAt })); return true; }
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ engine: engine.serialize(), wsUrl, startedAt, cfg, meter })); return true; }
     catch (_) { return false; }
   }
   let startedAt = Date.now();
@@ -829,6 +859,8 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
       const d = JSON.parse(raw);
       if (d.wsUrl) wsUrl = d.wsUrl;
       if (d.startedAt) startedAt = d.startedAt;
+      if (d.cfg) Object.assign(cfg, d.cfg);
+      if (d.meter) Object.assign(meter, d.meter);
       const ok = engine.restore(d.engine, Date.now());
       if (ok && d.engine.positions && d.engine.positions.length)
         note('warn', `${d.engine.positions.length} açık pozisyon sayfa kapalıyken izlenemedi, son bilinen değerle kapatıldı`);
@@ -847,9 +879,11 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
       note('warn', `Sayfa ${dur(gap / 1000)} arka planda kaldı; bu sürede veri kaçmış olabilir`);
     }
     if (running) {
+      engine.paused = !feedOn();
       try { engine.tick(now); } catch (e) { note('warn', 'Motor hatası: ' + esc(e.message)); }
       tx.flush();
-      if (tx.state === 'canlı' && now - tx.lastMsg > 30000) { note('warn', '30 sn veri gelmedi, yeniden bağlanılıyor'); try { tx.ws.close(); } catch (_) {} }
+      // Sessiz piyasada birkaç saniye mesaj gelmemesi normal; yalnız 2 dk tam sessizlikte yeniden bağlan.
+      if (tx.state === 'canlı' && now - tx.lastMsg > 120000) { note('warn', '2 dk veri gelmedi, yeniden bağlanılıyor'); try { tx.ws.close(); } catch (_) {} }
     }
   }
   setInterval(loop, 250);
@@ -926,8 +960,9 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
   function header() {
     const st = tx.state, rate = tx.rate();
     const dot = !running ? 'off' : st === 'canlı' ? 'live' : 'warn';
-    $('#status').innerHTML = `<span class="dot ${dot}"></span><b>${running ? esc(st) : 'durdu'}</b>
-      <span class="muted">${rate}/dk · ${engine.market.tokens.size} token · ${engine.positions.size} pozisyon</span>`;
+    const label = !running ? 'durdu' : tx.blocked() ? 'bağlanamıyor' : st;
+    $('#status').innerHTML = `<span class="dot ${tx.blocked() && running ? 'bad' : dot}"></span><b>${esc(label)}</b>
+      <span class="muted">${rate}/dk · ${engine.market.tokens.size} token · ${engine.positions.size} pozisyon · veri ${nf(costToday(), 4)} SOL</span>`;
     $('#runBtn').textContent = running ? 'Durdur' : 'Başlat';
     $('#runBtn').className = running ? 'btn ghost' : 'btn primary';
     $('#killBtn').classList.toggle('on', engine.kill);
@@ -954,11 +989,27 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
     const legend = engine.strategies.map((s) => `<span><i style="background:${COLORS[s.id]}"></i>${esc(s.id)}</span>`).join('');
     const ev = log.slice(0, 25).map((l) => `<li class="${l.kind}"><time>${hm(l.t)}</time>${l.text}</li>`).join('') || '<li class="muted">Henüz olay yok. Başlat\'a bas.</li>';
     const runFor = running ? `Çalışma süresi: ${dur((Date.now() - startedAt) / 1000)} · sinyal ${engine.signals}` : '';
-    return `${!running && !engine.closed.length ? startHint() : ''}
+    return `${running && tx.blocked() ? blockedHint() : ''}${!cfg.apiKey ? keyHint() : meter.budgetHit ? budgetHint() : ''}${!running && !engine.closed.length ? startHint() : ''}
       <div class="card"><div class="row"><h3>Bakiye eğrisi</h3><div class="legend">${legend}</div></div>
       <canvas id="eq" class="chart"></canvas><div class="muted small">${runFor}</div></div>
       ${cards}
       <div class="card"><h3>Olaylar</h3><ul class="events">${ev}</ul></div>`;
+  }
+
+  function keyHint() {
+    return `<div class="card hint warnc"><b>İşlem verisi kapalı, stratejiler beklemede.</b> PumpPortal yeni token akışını ücretsiz veriyor.
+      Ama fiyatı oluşturan alım-satım akışı için API anahtarı ve en az 0,02 SOL yüklü bağlı cüzdan istiyor; ücreti 10.000 mesaj başına 0,01 SOL.
+      Anahtarı Ayarlar'a girersen işlem akışı açılır. Anahtar yalnızca bu telefonda saklanır.</div>`;
+  }
+  function budgetHint() {
+    return `<div class="card hint warnc"><b>Günlük veri bütçesi doldu.</b> Bugün ${nf(costToday(), 4)} SOL'luk işlem verisi alındı. Yeni girişler yarına kadar durdu; bütçeyi Ayarlar'dan değiştirebilirsin.</div>`;
+  }
+
+  function blockedHint() {
+    return `<div class="card hint warnc"><b>Canlı veriye bağlanılamıyor.</b> ${tx.fails} deneme başarısız.
+      Sayfa büyük ihtimalle dış bağlantıya izin vermeyen bir önizlemede açık (örneğin Claude uygulamasının dosya görüntüleyicisi).
+      Dosyayı gerçek bir tarayıcıda (Chrome veya Safari) bir web adresi üzerinden aç. İnternet bağlantını da kontrol et.
+      <div class="muted small">Adres: ${esc(wsUrl)}${tx.err ? ' · ' + esc(tx.err) : ''}</div></div>`;
   }
 
   function startHint() {
@@ -1015,11 +1066,22 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
       <div class="card"><div class="chips">${chips}</div><ul class="trades">${list}</ul></div>`;
   }
 
+  function diag() {
+    const c = engine.market.counts;
+    const srv = tx.server.map((x) => `<li><time>${hm(x.t)}</time><code>${esc(x.txt)}</code></li>`).join('') || '<li class="muted">yok</li>';
+    return `<div class="card"><h3>Bağlantı tanısı</h3>
+      <div class="grid4"><div><span>Yeni token</span><b>${c.create}</b></div><div><span>İşlem</span><b>${c.trade}</b></div>
+      <div><span>Mezuniyet</span><b>${c.migrate}</b></div><div><span>Yok sayılan</span><b>${c.ignored}</b></div>
+      <div><span>Abonelik</span><b>${tx.subs.size}</b></div><div><span>Yeniden bağ.</span><b>${tx.reconnects}</b></div>
+      <div><span>İşlem akışı</span><b>${feedOn() ? 'açık' : 'kapalı'}</b></div><div><span>Veri bugün</span><b>${nf(costToday(), 4)}</b></div></div>
+      <div class="muted small" style="margin-top:8px">Son sunucu mesajları:</div><ul class="events">${srv}</ul></div>`;
+  }
+
   function vAkis() {
     const now = Date.now();
     const toks = [...engine.market.tokens.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 40);
-    if (!toks.length) return `<div class="card muted">${running ? 'Yeni token bekleniyor…' : 'Akışı görmek için Başlat\'a bas.'}</div>`;
-    return `<div class="card"><h3>Canlı token akışı</h3><ul class="feed">${toks.map((t) => {
+    if (!toks.length) return diag() + `<div class="card muted">${running ? 'Yeni token bekleniyor…' : 'Akışı görmek için Başlat\'a bas.'}</div>`;
+    return diag() + `<div class="card"><h3>Canlı token akışı</h3><ul class="feed">${toks.map((t) => {
       const m = TO.metrics(t, now), rug = TO.rugCheck(t, m, engine.filter);
       const held = engine.hasPosition(t.mint);
       return `<li class="${held ? 'held' : ''}"><div class="row"><div><b>${esc(t.symbol || '?')}</b> <span class="muted">${esc(t.name)}</span></div>
@@ -1047,7 +1109,11 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
         <label class="sw2"><input type="checkbox" data-en="${s.id}" ${s.enabled ? 'checked' : ''}><span>açık</span></label></div>
         <div class="muted small">${esc(s.desc)}</div>
         <div class="form">${Object.keys(s.params).map((k) => field('p:' + s.id, k, s.params[k])).join('')}</div></div>`).join('');
-    return `<div class="card"><h3>Genel</h3><div class="form">${g}</div>
+    return `<div class="card"><h3>PumpPortal veri erişimi</h3>
+        <label class="f wide"><span>API anahtarı (yalnızca bu cihazda saklanır)</span><input type="password" autocomplete="off" data-g="c" data-k="apiKey" value="${esc(cfg.apiKey)}" placeholder="pumpportal.fun'dan alınır"></label>
+        <div class="form">${field('c', 'dailyBudgetSol', cfg.dailyBudgetSol, 'Günlük veri bütçesi (SOL)')}</div>
+        <div class="muted small">Bugün: ${meter.trade.toLocaleString('tr-TR')} işlem mesajı = ${nf(costToday(), 4)} SOL. Bütçe dolunca işlem akışı kapanır, yeni giriş yapılmaz.</div></div>
+      <div class="card"><h3>Genel</h3><div class="form">${g}</div>
         <label class="f wide"><span>Veri adresi (WebSocket)</span><input data-g="ws" data-k="url" value="${esc(wsUrl)}"></label>
         <div class="muted small">Oranlar ondalık yazılır: 0.0125 = %1,25. Bakiye değişikliği "Sıfırla" sonrası geçerli olur.</div></div>
       <div class="card"><h3>Rug filtresi (ortak)</h3><div class="form">${f}</div></div>
@@ -1064,6 +1130,8 @@ nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px syst
     document.querySelectorAll('#view input[data-g]').forEach((inp) => {
       const g = inp.dataset.g, k = inp.dataset.k, raw = inp.value.trim().replace(',', '.');
       if (g === 'ws') { if (/^wss?:\/\//.test(raw)) wsUrl = raw; else bad++; return; }
+      if (g === 'c' && k === 'apiKey') { const old = cfg.apiKey; cfg.apiKey = inp.value.trim(); if (old !== cfg.apiKey && running) { tx.close(); setTimeout(() => tx.connect(), 300); } return; }
+      if (g === 'c') { const v = Number(raw); if (!isFinite(v) || v < 0) { bad++; inp.classList.add('bad'); return; } cfg[k] = v; if (costToday() < v) meter.budgetHit = false; return; }
       const v = Number(raw);
       if (!isFinite(v) || v < 0) { bad++; inp.classList.add('bad'); return; }
       inp.classList.remove('bad');
