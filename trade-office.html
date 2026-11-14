@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e14">
+<title>Trade Office · Demo</title>
+<style>
+:root{--bg:#0b0e14;--card:#131824;--line:#222a3a;--txt:#e6e9f0;--mut:#7d8597;--pos:#2fd47a;--neg:#ff5d6c;--acc:#4f9dff;--warn:#f2b84b}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:rgba(11,14,20,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 10px) 12px 10px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.brand h1{font-size:17px;margin:0;letter-spacing:.2px}.brand h1 span{color:var(--mut);font-weight:500;font-size:12px;margin-left:6px;border:1px solid var(--line);padding:1px 6px;border-radius:6px}
+#status{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:12.5px;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--mut)}.dot.live{background:var(--pos);box-shadow:0 0 0 3px rgba(47,212,122,.18)}.dot.warn{background:var(--warn)}
+.tools{display:flex;gap:6px;margin-top:8px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:10px;padding:9px 12px;font:600 13px system-ui;flex:1;cursor:pointer}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}.btn.ghost{background:transparent}.btn.danger{border-color:#5a2730;color:var(--neg)}
+.btn.on{background:#3a1b22;border-color:var(--neg);color:#ffb3bb}#wakeBtn.on{background:#13304a;border-color:var(--acc);color:#cfe4ff}
+.btn.sm{flex:0 0 auto;padding:6px 10px;font-size:12px;white-space:nowrap}
+main{padding:10px 10px calc(76px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.card h3{margin:0 0 8px;font-size:14px}
+.hint{border-color:#2a3b57;background:#111a2a;font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.strat,.pcard{border-left:3px solid var(--c)}
+.sname{font-weight:700}.big{font-size:20px;font-weight:700;margin:4px 0}.big small{font-size:12px;color:var(--mut);font-weight:500}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.grid4 div{background:#0f1420;border-radius:8px;padding:6px;min-width:0}.grid4 span{display:block;color:var(--mut);font-size:10.5px}.grid4 b{font-size:13px}
+.pcard .grid4{margin-bottom:8px}
+.badge{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--mut)}.badge.red{color:var(--neg);border-color:#5a2730}
+.muted{color:var(--mut)}.small{font-size:12px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.chart{width:100%;height:170px;display:block}
+.legend{display:flex;gap:10px;font-size:12px;color:var(--mut)}.legend i,.sw{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.events,.trades,.feed{list-style:none;margin:0;padding:0}
+.events li{padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}.events time{color:var(--mut);margin-right:6px;font-variant-numeric:tabular-nums}
+.events li.win{color:#bff3d6}.events li.loss{color:#ffc7cd}.events li.warn{color:#ffe1a6}
+.trades li,.feed li{padding:8px 0;border-bottom:1px solid var(--line)}.feed li.held{background:linear-gradient(90deg,rgba(79,157,255,.12),transparent)}
+.bar{height:5px;background:#0f1420;border-radius:3px;margin:5px 0;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#4f9dff,#2fd47a)}
+.chips{display:flex;gap:6px;margin-bottom:6px}.chip{border:1px solid var(--line);background:transparent;color:var(--mut);border-radius:20px;padding:5px 12px;font:600 12px system-ui}.chip.on{color:#fff;border-color:var(--acc);background:#13304a}
+table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}th,td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.f{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--mut)}.f.wide{margin-top:4px}
+.f input{background:#0f1420;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font:14px system-ui;width:100%}.f input.bad{border-color:var(--neg)}
+.sw2{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}.sw2 input{width:18px;height:18px}
+.btns{display:flex;flex-direction:column;gap:8px}
+.link{color:var(--acc);font-size:12.5px;text-decoration:none}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(15,19,29,.97);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11.5px system-ui;padding:12px 2px;cursor:pointer}nav button.on{color:#fff;box-shadow:inset 0 2px 0 var(--acc)}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9;padding:20px}#dlg[hidden]{display:none}
+#dlg .card{max-width:360px;width:100%}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1>Trade Office<span>DEMO</span></h1><button class="btn sm" id="wakeBtn" title="Ekranın kapanmasını engelle">Ekran açık</button></div>
+  <div id="status"></div>
+  <div class="tools"><button class="btn primary" id="runBtn">Başlat</button><button class="btn" id="killBtn">Acil dur</button></div>
+</header>
+<main id="view"></main>
+<nav>
+  <button data-tab="ozet" class="on">Özet</button><button data-tab="poz">Pozisyon</button><button data-tab="islem">İşlemler</button><button data-tab="akis">Akış</button><button data-tab="ayar">Ayarlar</button>
+</nav>
+<div id="dlg" hidden><div class="card"><p id="dlgText"></p><div class="tools"><button class="btn ghost" id="dlgCancel">Vazgeç</button><button class="btn danger" id="dlgOk">Tamam</button></div></div></div>
+<script>/* Trade Office — çekirdek (saf mantık, arayüzden bağımsız).
+ * Curve matematiği, piyasa durumu, rug filtresi, stratejiler, demo (paper) motoru, risk ve istatistik.
+ * Zaman (now) ve rastgelelik (rng) dışarıdan verilir: testler deterministik çalışır.
+ */
+(function (root) {
+  'use strict';
+
+  // ---------------------------------------------------------------- sabitler
+  const CURVE = {
+    V_SOL0: 30,                 // başlangıç sanal SOL
+    V_TOK0: 1073000000,         // başlangıç sanal token
+    SELLABLE: 793100000,        // curve'de satılabilen token
+    SUPPLY: 1000000000,         // standart toplam arz
+  };
+
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const isNum = (x) => typeof x === 'number' && isFinite(x);
+
+  // ---------------------------------------------------------------- curve matematiği
+  function price(vSol, vTok) { return vSol / vTok; }                       // SOL / token
+  function progress(vTok) { return clamp((CURVE.V_TOK0 - vTok) / CURVE.SELLABLE, 0, 1); }
+  function mcapSol(vSol, vTok) { return price(vSol, vTok) * CURVE.SUPPLY; }
+
+  /** Alım: ücret SOL'dan düşülür, kalan SOL curve formülüne girer. */
+  function buyQuote(vSol, vTok, solIn, fee) {
+    const solNet = solIn / (1 + fee);
+    const tokens = (vTok * solNet) / (vSol + solNet);
+    return { tokens, solNet, pumpFee: solIn - solNet };
+  }
+
+  /** Satım: curve'den çıkan SOL'dan ücret düşülür. */
+  function sellQuote(vSol, vTok, tokIn, fee) {
+    const gross = (vSol * tokIn) / (vTok + tokIn);
+    const pumpFee = gross * fee;
+    return { sol: gross - pumpFee, gross, pumpFee };
+  }
+
+  // ---------------------------------------------------------------- ayarlar
+  const DEFAULT_SETTINGS = {
+    startBalanceSol: 2,       // her stratejinin sanal başlangıç bakiyesi
+    tradeSizeSol: 0.1,        // işlem başı tutar
+    latencyMs: 800,           // sinyal -> dolum gecikmesi
+    failRate: 0.10,           // rastgele başarısız işlem oranı
+    pumpFee: 0.0125,          // pump.fun curve ücreti (her yönde)
+    portalFee: 0.005,         // PumpPortal işlem API ücreti
+    baseFeeSol: 0.000005,     // Solana ana işlem ücreti
+    priorityFeeSol: 0.0003,   // priority fee varsayımı
+    maxSlippage: 0.15,        // alımda kabul edilen en fazla fiyat kayması
+    maxOpenPerStrategy: 3,
+    dailyLossPct: 0.30,       // gün içi bu kadar düşerse strateji o gün durur
+    migrationHaircut: 0.10,   // mezuniyette zorla kapanan pozisyona ek kötümser kesinti
+    trackMinutes: 20,         // yeni token kaç dakika izlenir
+    maxTracked: 400,          // aynı anda izlenen en fazla token
+    earlyWindowMs: 2000,      // "erken/bundle" sayılan ilk alım penceresi
+    sellRetries: 5,
+  };
+
+  // ---------------------------------------------------------------- piyasa durumu
+  class Market {
+    constructor(settings, hooks) {
+      this.s = settings;
+      this.tokens = new Map();
+      this.hooks = hooks || {};          // { subscribe(mints), unsubscribe(mints) }
+      this.counts = { create: 0, trade: 0, migrate: 0, ignored: 0 };
+    }
+
+    get(mint) { return this.tokens.get(mint); }
+
+    /** PumpPortal mesajını işler. Dönüş: {kind, token} | null */
+    handle(msg, now) {
+      if (!msg || typeof msg !== 'object' || !msg.mint) { this.counts.ignored++; return null; }
+      const tx = msg.txType;
+      if (tx === 'create') return this.onCreate(msg, now);
+      if (tx === 'buy' || tx === 'sell') return this.onTrade(msg, now);
+      if (tx === 'migrate' || tx === 'migration' || msg.method === 'migration') return this.onMigrate(msg, now);
+      this.counts.ignored++;
+      return null;
+    }
+
+    onCreate(m, now) {
+      if (!isNum(m.vSolInBondingCurve) || !isNum(m.vTokensInBondingCurve)) { this.counts.ignored++; return null; }
+      if (this.tokens.has(m.mint)) return { kind: 'dup', token: this.tokens.get(m.mint) };
+      const devTok = isNum(m.initialBuy) ? m.initialBuy : 0;
+      const t = {
+        mint: m.mint,
+        name: String(m.name || '').slice(0, 40),
+        symbol: String(m.symbol || '').slice(0, 16),
+        creator: m.traderPublicKey || '',
+        createdAt: now,
+        vSol: m.vSolInBondingCurve,
+        vTok: m.vTokensInBondingCurve,
+        devInitialTokens: devTok,
+        devInitialSol: isNum(m.solAmount) ? m.solAmount : 0,
+        devBalance: devTok,
+        devMax: devTok,
+        devSoldTokens: 0,
+        holders: new Map(),
+        buyers: new Set(),
+        trades: [],              // {t, buy, sol, tok, trader}
+        progHist: [],            // {t, p}
+        earlyTokens: 0,
+        migrated: false,
+        migratedAt: 0,
+        lastTradeAt: now,
+        peakProgress: 0,
+        shadowSol: 0,            // demo işlemlerimizin curve üzerindeki sanal etkisi
+        shadowTok: 0,
+      };
+      if (t.creator && devTok > 0) t.holders.set(t.creator, devTok);
+      t.peakProgress = progress(t.vTok);
+      t.progHist.push({ t: now, p: t.peakProgress });
+      this.tokens.set(t.mint, t);
+      this.counts.create++;
+      if (this.hooks.subscribe) this.hooks.subscribe([t.mint]);
+      this.prune(now);
+      return { kind: 'create', token: t };
+    }
+
+    onTrade(m, now) {
+      const t = this.tokens.get(m.mint);
+      if (!t) { this.counts.ignored++; return null; }
+      if (!isNum(m.vSolInBondingCurve) || !isNum(m.vTokensInBondingCurve)) { this.counts.ignored++; return null; }
+      if (t.migrated) { this.counts.ignored++; return null; }
+      const buy = m.txType === 'buy';
+      const sol = isNum(m.solAmount) ? m.solAmount : 0;
+      const tok = isNum(m.tokenAmount) ? m.tokenAmount : 0;
+      const trader = m.traderPublicKey || '';
+      t.vSol = m.vSolInBondingCurve;
+      t.vTok = m.vTokensInBondingCurve;
+      t.lastTradeAt = now;
+      t.trades.push({ t: now, buy, sol, tok, trader });
+      if (t.trades.length > 600) t.trades.splice(0, t.trades.length - 600);
+
+      if (trader) {
+        if (isNum(m.newTokenBalance)) {
+          if (m.newTokenBalance > 0) t.holders.set(trader, m.newTokenBalance); else t.holders.delete(trader);
+        }
+        if (buy && trader !== t.creator) t.buyers.add(trader);
+      }
+      if (trader && trader === t.creator) {
+        if (buy) { t.devBalance += tok; t.devMax = Math.max(t.devMax, t.devBalance); }
+        else { t.devSoldTokens += tok; t.devBalance = Math.max(0, t.devBalance - tok); }
+        if (isNum(m.newTokenBalance)) t.devBalance = m.newTokenBalance;
+      }
+      if (buy && trader !== t.creator && now - t.createdAt <= this.s.earlyWindowMs) t.earlyTokens += tok;
+
+      const p = progress(t.vTok);
+      t.peakProgress = Math.max(t.peakProgress, p);
+      const last = t.progHist[t.progHist.length - 1];
+      if (!last || now - last.t >= 1000) t.progHist.push({ t: now, p });
+      else last.p = p;
+      if (t.progHist.length > 900) t.progHist.splice(0, t.progHist.length - 900);
+      this.counts.trade++;
+      return { kind: 'trade', token: t };
+    }
+
+    onMigrate(m, now) {
+      const t = this.tokens.get(m.mint);
+      this.counts.migrate++;
+      if (!t) return { kind: 'migrate', token: null, mint: m.mint };
+      t.migrated = true;
+      t.migratedAt = now;
+      return { kind: 'migrate', token: t };
+    }
+
+    /** Eski ve pozisyonsuz tokenleri izlemeden çıkarır. keep(mint) true dönerse tutulur. */
+    prune(now, keep) {
+      const keepFn = keep || this.keep || (() => false);
+      const maxAge = this.s.trackMinutes * 60000;
+      const drop = [];
+      for (const [mint, t] of this.tokens) {
+        if (keepFn(mint)) continue;
+        if (now - t.createdAt > maxAge || (t.migrated && now - t.migratedAt > 60000)) drop.push(mint);
+      }
+      if (this.tokens.size - drop.length > this.s.maxTracked) {
+        const rest = [...this.tokens.values()]
+          .filter((t) => !drop.includes(t.mint) && !keepFn(t.mint))
+          .sort((a, b) => a.createdAt - b.createdAt);
+        const extra = this.tokens.size - drop.length - this.s.maxTracked;
+        for (let i = 0; i < extra && i < rest.length; i++) drop.push(rest[i].mint);
+      }
+      for (const mint of drop) this.tokens.delete(mint);
+      if (drop.length && this.hooks.unsubscribe) this.hooks.unsubscribe(drop);
+      return drop;
+    }
+  }
+
+  // ---------------------------------------------------------------- metrikler
+  function metrics(t, now) {
+    const effSol = t.vSol + t.shadowSol, effTok = t.vTok - t.shadowTok;
+    const win = (ms) => {
+      let b = 0, s = 0, n = 0;
+      for (let i = t.trades.length - 1; i >= 0; i--) {
+        const x = t.trades[i];
+        if (now - x.t > ms) break;
+        if (x.buy) b += x.sol; else s += x.sol;
+        n++;
+      }
+      return { buy: b, sell: s, n, net: b - s, ratio: s > 0 ? b / s : (b > 0 ? 99 : 0) };
+    };
+    const progAgo = (ms) => {
+      let p = t.progHist.length ? t.progHist[0].p : 0;
+      for (const h of t.progHist) { if (now - h.t >= ms) p = h.p; else break; }
+      return p;
+    };
+    const bal = [...t.holders.values()].sort((a, b) => b - a);
+    const top10 = bal.slice(0, 10).reduce((a, b) => a + b, 0) / CURVE.SUPPLY;
+    const p = progress(t.vTok);
+    return {
+      age: (now - t.createdAt) / 1000,
+      progress: p,
+      price: price(effSol, effTok),
+      mcapSol: mcapSol(t.vSol, t.vTok),
+      uniqueBuyers: t.buyers.size,
+      holders: t.holders.size,
+      w30: win(30000),
+      w60: win(60000),
+      progRate60: p - progAgo(60000),
+      top10,
+      devShare: t.devBalance / CURVE.SUPPLY,
+      devSoldFrac: t.devMax > 0 ? clamp(t.devSoldTokens / t.devMax, 0, 1) : 0,
+      devInitialSol: t.devInitialSol,
+      earlyShare: t.earlyTokens / CURVE.SUPPLY,
+      idle: (now - t.lastTradeAt) / 1000,
+      trades: t.trades.length,
+    };
+  }
+
+  // ---------------------------------------------------------------- rug filtresi (ortak)
+  const DEFAULT_FILTER = {
+    maxTop10: 0.40,          // ilk 10 sahibin arz payı
+    maxDevShare: 0.10,       // dev'in şu anki payı
+    maxDevSoldFrac: 0.50,    // dev pozisyonunun satılan kısmı
+    maxEarlyShare: 0.25,     // ilk 2 sn'de dev dışı alımlarla toplanan arz (bundle göstergesi)
+    maxDevInitialSol: 3,     // dev'in açılış alımı (SOL)
+  };
+
+  function rugCheck(t, m, f) {
+    if (!t.symbol && !t.name) return 'isim yok';
+    if (m.top10 > f.maxTop10) return `ilk10 %${(m.top10 * 100).toFixed(0)}`;
+    if (m.devShare > f.maxDevShare) return `dev payı %${(m.devShare * 100).toFixed(0)}`;
+    if (m.devSoldFrac > f.maxDevSoldFrac) return `dev sattı %${(m.devSoldFrac * 100).toFixed(0)}`;
+    if (m.earlyShare > f.maxEarlyShare) return `erken/bundle %${(m.earlyShare * 100).toFixed(0)}`;
+    if (m.devInitialSol > f.maxDevInitialSol) return `dev açılış ${m.devInitialSol.toFixed(1)} SOL`;
+    return null;
+  }
+
+  // ---------------------------------------------------------------- stratejiler
+  function makeStrategies() {
+    return [
+      {
+        id: 'A', name: 'A · Lansman (referans)', enabled: true,
+        desc: 'Token açılır açılmaz girer. Hız yarışında gerçekte kaybedilir; kıyas için.',
+        params: { maxDevInitialSol: 2, tp: 0.5, sl: 0.25, maxHoldSec: 180 },
+        entry(t, m, p) {
+          if (m.age > 5) return 'geç';
+          if (m.devInitialSol > p.maxDevInitialSol) return 'dev alımı büyük';
+          return null;
+        },
+        exit(pos, t, m, p, now) {
+          if (pos.pnlPct >= p.tp) return { frac: 1, reason: 'TP' };
+          if (pos.pnlPct <= -p.sl) return { frac: 1, reason: 'SL' };
+          if ((now - pos.openedAt) / 1000 >= p.maxHoldSec) return { frac: 1, reason: 'süre' };
+          return null;
+        },
+      },
+      {
+        id: 'B', name: 'B · Erken momentum', enabled: true,
+        desc: 'İlk dakikalarda alım akışı güçlü, curve %15-60 arası tokenler.',
+        params: {
+          minAgeSec: 60, maxAgeSec: 600, minProg: 0.15, maxProg: 0.60, minBuyers: 25,
+          minNet60: 3, minRatio60: 1.5, tp1: 0.4, tp1Frac: 0.5, trail: 0.20, sl: 0.20, maxHoldSec: 600,
+        },
+        entry(t, m, p) {
+          if (m.age < p.minAgeSec || m.age > p.maxAgeSec) return 'yaş';
+          if (m.progress < p.minProg || m.progress > p.maxProg) return 'curve';
+          if (m.uniqueBuyers < p.minBuyers) return 'alıcı az';
+          if (m.w60.net < p.minNet60) return 'net akış';
+          if (m.w60.ratio < p.minRatio60) return 'al/sat oranı';
+          return null;
+        },
+        exit(pos, t, m, p, now) {
+          if (pos.pnlPct <= -p.sl) return { frac: 1, reason: 'SL' };
+          if (!pos.partialDone && pos.pnlPct >= p.tp1) return { frac: p.tp1Frac, reason: 'TP1', partial: true };
+          if (pos.partialDone && pos.drawFromPeak >= p.trail) return { frac: 1, reason: 'iz süren stop' };
+          if (m.devSoldFrac > 0.5) return { frac: 1, reason: 'dev sattı' };
+          if ((now - pos.openedAt) / 1000 >= p.maxHoldSec) return { frac: 1, reason: 'süre' };
+          return null;
+        },
+      },
+      {
+        id: 'C', name: 'C · Mezuniyete yakın', enabled: true,
+        desc: 'Curve %70-90 ve hızla doluyor. Mezuniyetten hemen önce çıkar.',
+        params: { minProg: 0.70, maxProg: 0.90, minRate60: 0.10, minBuyers: 60, exitProg: 0.97, sl: 0.15, maxHoldSec: 300 },
+        entry(t, m, p) {
+          if (m.progress < p.minProg || m.progress > p.maxProg) return 'curve';
+          if (m.progRate60 < p.minRate60) return 'dolma hızı';
+          if (m.uniqueBuyers < p.minBuyers) return 'alıcı az';
+          return null;
+        },
+        exit(pos, t, m, p, now) {
+          if (m.progress >= p.exitProg) return { frac: 1, reason: 'mezuniyet öncesi' };
+          if (pos.pnlPct <= -p.sl) return { frac: 1, reason: 'SL' };
+          if ((now - pos.openedAt) / 1000 >= p.maxHoldSec) return { frac: 1, reason: 'süre' };
+          return null;
+        },
+      },
+    ];
+  }
+
+  // ---------------------------------------------------------------- istatistik
+  function median(a) {
+    if (!a.length) return 0;
+    const s = [...a].sort((x, y) => x - y), k = s.length >> 1;
+    return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2;
+  }
+
+  function stats(closed) {
+    const pnl = closed.map((c) => c.pnlSol);
+    const pct = closed.map((c) => c.pnlPct);
+    const wins = pnl.filter((x) => x > 0), losses = pnl.filter((x) => x <= 0);
+    const gp = wins.reduce((a, b) => a + b, 0), gl = -losses.reduce((a, b) => a + b, 0);
+    const total = pnl.reduce((a, b) => a + b, 0);
+    const top3 = [...pnl].sort((a, b) => b - a).slice(0, 3).reduce((a, b) => a + (b > 0 ? b : 0), 0);
+    return {
+      n: closed.length,
+      winRate: closed.length ? wins.length / closed.length : 0,
+      totalSol: total,
+      avgPct: pct.length ? pct.reduce((a, b) => a + b, 0) / pct.length : 0,
+      medianPct: median(pct),
+      profitFactor: gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0),
+      expectancySol: closed.length ? total / closed.length : 0,
+      withoutTop3Sol: total - top3,
+      feesSol: closed.reduce((a, c) => a + (c.feesSol || 0), 0),
+    };
+  }
+
+  // ---------------------------------------------------------------- demo motoru
+  class Engine {
+    constructor(opts) {
+      this.s = Object.assign({}, DEFAULT_SETTINGS, opts.settings || {});
+      this.filter = Object.assign({}, DEFAULT_FILTER, opts.filter || {});
+      this.rng = opts.rng || Math.random;
+      this.strategies = opts.strategies || makeStrategies();
+      this.onEvent = opts.onEvent || (() => {});
+      this.market = new Market(this.s, opts.hooks);
+      this.market.keep = (mint) => this.hasPosition(mint);
+      this.queue = [];            // bekleyen emirler {at, kind, posId, frac, reason}
+      this.positions = new Map(); // açık/bekleyen pozisyonlar
+      this.closed = [];
+      this.seq = 1;
+      this.kill = false;
+      this.wallets = {};
+      this.tried = {};            // strateji -> Set(mint)
+      this.rejects = {};          // strateji -> {sebep: sayı}
+      this.signals = 0;
+      this.rejSeen = new Set();
+      this.equityHist = [];
+      for (const st of this.strategies) this.resetWallet(st.id, opts.now || 0);
+    }
+
+    resetWallet(id, now) {
+      this.wallets[id] = { cash: this.s.startBalanceSol, start: this.s.startBalanceSol, fees: 0,
+        peak: this.s.startBalanceSol, maxDD: 0, dayStart: this.s.startBalanceSol, day: dayKey(now), halted: false };
+      this.tried[id] = new Set();
+      this.rejects[id] = {};
+    }
+
+    hasPosition(mint) {
+      for (const p of this.positions.values()) if (p.mint === mint) return true;
+      return false;
+    }
+
+    netFee() { return this.s.baseFeeSol + this.s.priorityFeeSol; }
+
+    openCount(id) { let n = 0; for (const p of this.positions.values()) if (p.strat === id) n++; return n; }
+
+    /** Pozisyonun anlık satış değeri (tüm ücretler düşülmüş). */
+    markValue(pos) {
+      const t = this.market.get(pos.mint);
+      if (!t || pos.tokens <= 0) return pos.lastValue || 0;
+      const q = sellQuote(t.vSol + t.shadowSol, t.vTok - t.shadowTok, pos.tokens, this.s.pumpFee);
+      return Math.max(0, q.sol * (1 - this.s.portalFee) - this.netFee());
+    }
+
+    equity(id) {
+      let e = this.wallets[id].cash;
+      for (const p of this.positions.values()) {
+        if (p.strat !== id) continue;
+        if (p.status === 'pending') e += p.reserved;
+        else e += this.markValue(p); // kısmi satış gelirleri zaten nakitte
+      }
+      return e;
+    }
+
+    // ---- olay girişi
+    ingest(msg, now) {
+      const r = this.market.handle(msg, now);
+      if (!r || !r.token) return r;
+      if (r.kind === 'migrate') { this.onMigration(r.token, now); return r; }
+      if (r.kind === 'create' || r.kind === 'trade') this.evaluate(r.token, now);
+      return r;
+    }
+
+    evaluate(t, now) {
+      if (this.kill || t.migrated) return;
+      const m = metrics(t, now);
+      let rug;   // yalnız gerektiğinde hesapla
+      for (const st of this.strategies) {
+        if (!st.enabled) continue;
+        const w = this.wallets[st.id];
+        if (w.halted || this.tried[st.id].has(t.mint)) continue;
+        const why = st.entry(t, m, st.params);
+        if (why) continue;
+        if (rug === undefined) rug = rugCheck(t, m, this.filter);
+        // Rug/limit/bakiye reddi kalıcı değil: koşullar değişince token yeniden değerlendirilir.
+        if (rug) { this.reject(st.id, t.mint, 'rug: ' + rug.split(' ')[0]); continue; }
+        if (this.openCount(st.id) >= this.s.maxOpenPerStrategy) { this.reject(st.id, t.mint, 'pozisyon limiti'); continue; }
+        if (w.cash < this.s.tradeSizeSol + this.netFee()) { this.reject(st.id, t.mint, 'bakiye'); continue; }
+        this.signals++;
+        this.tried[st.id].add(t.mint);
+        this.placeBuy(st, t, m, now);
+      }
+    }
+
+    /** Red sayacı: aynı token aynı sebeple bir kez sayılır. */
+    reject(id, mint, why) {
+      if (mint) {
+        const k = id + '|' + mint + '|' + why;
+        if (this.rejSeen.has(k)) return;
+        this.rejSeen.add(k);
+        if (this.rejSeen.size > 50000) this.rejSeen.clear();
+      }
+      this.rejects[id][why] = (this.rejects[id][why] || 0) + 1;
+    }
+
+    placeBuy(st, t, m, now) {
+      const size = this.s.tradeSizeSol;
+      const w = this.wallets[st.id];
+      w.cash -= size;
+      const pos = {
+        id: this.seq++, strat: st.id, mint: t.mint, symbol: t.symbol || t.name || t.mint.slice(0, 4),
+        status: 'pending', signalAt: now, signalPrice: m.price, signalProg: m.progress, reserved: size,
+        tokens: 0, costSol: 0, proceeds: 0, feesSol: 0, openedAt: 0, entryPrice: 0, peakValueRatio: 0,
+        pnlPct: 0, drawFromPeak: 0, partialDone: false, sellTries: 0, closing: false, lastValue: 0, exits: [],
+      };
+      this.positions.set(pos.id, pos);
+      this.queue.push({ at: now + this.s.latencyMs, kind: 'buy', posId: pos.id });
+      this.onEvent({ type: 'signal', pos, t: now });
+    }
+
+    placeSell(pos, frac, reason, now, partial) {
+      if (pos.closing && !partial) return;
+      if (!partial) pos.closing = true;
+      this.queue.push({ at: now + this.s.latencyMs, kind: 'sell', posId: pos.id, frac, reason, partial: !!partial });
+    }
+
+    // ---- zaman ilerletme: bekleyen emirleri işler, açık pozisyonları denetler
+    tick(now) {
+      // gün değişimi
+      for (const id in this.wallets) {
+        const w = this.wallets[id], d = dayKey(now);
+        if (w.day !== d) { w.day = d; w.dayStart = this.equity(id); w.halted = false; }
+      }
+      // bekleyen emirler
+      const due = this.queue.filter((q) => q.at <= now);
+      this.queue = this.queue.filter((q) => q.at > now);
+      for (const q of due) {
+        const pos = this.positions.get(q.posId);
+        if (!pos) continue;
+        if (q.kind === 'buy') this.execBuy(pos, now);
+        else this.execSell(pos, q, now);
+      }
+      // açık pozisyon denetimi
+      for (const pos of [...this.positions.values()]) {
+        if (pos.status !== 'open') continue;
+        const t = this.market.get(pos.mint);
+        if (!t) continue;
+        this.updateMark(pos);
+        if (pos.closing) continue;
+        const st = this.strategies.find((s) => s.id === pos.strat);
+        const m = metrics(t, now);
+        const ex = this.kill ? { frac: 1, reason: 'acil durdurma' } : st.exit(pos, t, m, st.params, now);
+        if (ex) {
+          if (ex.partial) { pos.partialDone = true; this.placeSell(pos, ex.frac, ex.reason, now, true); }
+          else this.placeSell(pos, 1, ex.reason, now, false);
+        }
+      }
+      // risk: günlük zarar ve maks düşüş
+      for (const id in this.wallets) {
+        const w = this.wallets[id], e = this.equity(id);
+        w.peak = Math.max(w.peak, e);
+        w.maxDD = Math.max(w.maxDD, w.peak > 0 ? (w.peak - e) / w.peak : 0);
+        if (!w.halted && e < w.dayStart * (1 - this.s.dailyLossPct)) {
+          w.halted = true;
+          this.onEvent({ type: 'halt', strat: id, t: now });
+        }
+      }
+      this.market.prune(now);
+    }
+
+    updateMark(pos) {
+      const v = this.markValue(pos);
+      pos.lastValue = v;
+      const basis = pos.costSol * (pos.tokens / Math.max(pos.tokensInitial, 1e-12));
+      const ratio = basis > 0 ? v / basis : 0;   // kalan kısmın maliyetine göre
+      pos.pnlPct = ratio - 1;
+      pos.peakValueRatio = Math.max(pos.peakValueRatio, ratio);
+      pos.drawFromPeak = pos.peakValueRatio > 0 ? 1 - ratio / pos.peakValueRatio : 0;
+    }
+
+    execBuy(pos, now) {
+      const w = this.wallets[pos.strat];
+      const t = this.market.get(pos.mint);
+      const fee = this.netFee();
+      const fail = (why) => {
+        w.cash += pos.reserved - fee; w.fees += fee;
+        this.positions.delete(pos.id);
+        this.reject(pos.strat, null, 'alım başarısız: ' + why);
+        this.onEvent({ type: 'buyFail', pos, why, t: now });
+      };
+      if (!t || t.migrated) return fail('token yok/mezun');
+      if (this.kill) return fail('acil durdurma');
+      if (this.rng() < this.s.failRate) return fail('ağ');
+      const size = pos.reserved;
+      const portal = size * this.s.portalFee;
+      const curveIn = size - portal;
+      const q = buyQuote(t.vSol + t.shadowSol, t.vTok - t.shadowTok, curveIn, this.s.pumpFee);
+      const fillPrice = curveIn / q.tokens;
+      if (fillPrice > pos.signalPrice * (1 + this.s.maxSlippage) * (1 + this.s.pumpFee)) return fail('kayma');
+      t.shadowSol += q.solNet; t.shadowTok += q.tokens;
+      w.cash -= fee; w.fees += fee + portal + q.pumpFee;
+      Object.assign(pos, {
+        status: 'open', openedAt: now, tokens: q.tokens, tokensInitial: q.tokens, costSol: size + fee,
+        entryPrice: fillPrice, feesSol: fee + portal + q.pumpFee, entryProg: progress(t.vTok),
+      });
+      this.updateMark(pos);
+      pos.peakValueRatio = Math.max(1, pos.peakValueRatio);
+      this.onEvent({ type: 'open', pos, t: now });
+    }
+
+    execSell(pos, q, now, forced) {
+      const w = this.wallets[pos.strat];
+      const t = this.market.get(pos.mint);
+      const fee = this.netFee();
+      if (!t) return;
+      if (!forced && this.rng() < this.s.failRate) {
+        // Başarısız satışın ağ ücreti de bu işlemin maliyetidir (k/z'ye yansır).
+        w.cash -= fee; w.fees += fee; pos.feesSol += fee; pos.costSol += fee; pos.sellTries++;
+        if (pos.sellTries <= this.s.sellRetries) {
+          this.queue.push({ at: now + this.s.latencyMs, kind: 'sell', posId: pos.id, frac: q.frac, reason: q.reason, partial: q.partial });
+        } else {
+          pos.closing = false; // bir sonraki denetimde yeniden çıkış denenir
+        }
+        this.onEvent({ type: 'sellFail', pos, t: now });
+        return;
+      }
+      pos.sellTries = 0;
+      const tok = q.frac >= 1 ? pos.tokens : pos.tokens * q.frac;
+      if (tok <= 0) return;
+      const sq = sellQuote(t.vSol + t.shadowSol, t.vTok - t.shadowTok, tok, this.s.pumpFee);
+      let out = sq.sol;
+      if (forced) out *= 1 - this.s.migrationHaircut;
+      const portal = out * this.s.portalFee;
+      const proceeds = Math.max(0, out - portal - fee);
+      t.shadowSol = Math.max(0, t.shadowSol - sq.gross);
+      t.shadowTok = Math.max(0, t.shadowTok - tok);
+      pos.tokens -= tok;
+      pos.proceeds += proceeds;
+      pos.feesSol += fee + portal + sq.pumpFee;
+      w.cash += proceeds; w.fees += fee + portal + sq.pumpFee;
+      pos.exits.push({ t: now, reason: q.reason, sol: proceeds, frac: q.frac });
+      if (pos.tokens <= 1e-6 || q.frac >= 1) this.close(pos, q.reason, now);
+      else { this.updateMark(pos); this.onEvent({ type: 'partial', pos, t: now }); }
+    }
+
+    close(pos, reason, now) {
+      this.positions.delete(pos.id);
+      const rec = {
+        id: pos.id, strat: pos.strat, mint: pos.mint, symbol: pos.symbol, openedAt: pos.openedAt, closedAt: now,
+        costSol: pos.costSol, proceedsSol: pos.proceeds, pnlSol: pos.proceeds - pos.costSol,
+        pnlPct: pos.costSol > 0 ? pos.proceeds / pos.costSol - 1 : 0, feesSol: pos.feesSol, reason,
+        entryProg: pos.entryProg, holdSec: (now - pos.openedAt) / 1000, exits: pos.exits,
+      };
+      this.closed.push(rec);
+      if (this.closed.length > 3000) this.closed.splice(0, this.closed.length - 3000);
+      this.onEvent({ type: 'close', rec, t: now });
+    }
+
+    onMigration(t, now) {
+      for (const pos of [...this.positions.values()]) {
+        if (pos.mint !== t.mint) continue;
+        if (pos.status === 'pending') continue; // execBuy "mezun" diye reddeder
+        // Bekleyen satışları iptal et, mezuniyet anındaki son curve rezervleriyle kötümser kapat.
+        this.queue = this.queue.filter((q) => q.posId !== pos.id);
+        this.execSell(pos, { frac: 1, reason: 'mezuniyet (zorla)' }, now, true);
+      }
+    }
+
+    killSwitch(on, now) {
+      this.kill = !!on;
+      if (this.kill) {
+        this.queue = this.queue.filter((q) => q.kind === 'sell');
+        for (const pos of [...this.positions.values()]) {
+          if (pos.status === 'pending') {
+            this.wallets[pos.strat].cash += pos.reserved; this.positions.delete(pos.id);
+          } else if (!pos.closing) this.placeSell(pos, 1, 'acil durdurma', now, false);
+        }
+      }
+    }
+
+    sampleEquity(now) {
+      const row = { t: now };
+      for (const st of this.strategies) row[st.id] = this.equity(st.id);
+      this.equityHist.push(row);
+      if (this.equityHist.length > 2880) this.equityHist.splice(0, this.equityHist.length - 2880);
+      return row;
+    }
+
+    // ---- kayıt / geri yükleme (açık pozisyonlar dahil)
+    serialize() {
+      return {
+        v: 1, settings: this.s, filter: this.filter,
+        strategies: this.strategies.map((s) => ({ id: s.id, enabled: s.enabled, params: s.params })),
+        wallets: this.wallets, closed: this.closed.slice(-1500), equityHist: this.equityHist.slice(-1500),
+        positions: [...this.positions.values()].filter((p) => p.status === 'open'), seq: this.seq,
+        rejects: this.rejects,
+      };
+    }
+
+    restore(d, now) {
+      if (!d || d.v !== 1) return false;
+      Object.assign(this.s, d.settings || {});
+      Object.assign(this.filter, d.filter || {});
+      for (const sd of d.strategies || []) {
+        const st = this.strategies.find((s) => s.id === sd.id);
+        if (st) { st.enabled = sd.enabled; Object.assign(st.params, sd.params); }
+      }
+      for (const id in d.wallets || {}) if (this.wallets[id]) Object.assign(this.wallets[id], d.wallets[id]);
+      this.closed = d.closed || [];
+      this.equityHist = d.equityHist || [];
+      this.seq = d.seq || this.seq;
+      this.rejects = Object.assign(this.rejects, d.rejects || {});
+      // Açık pozisyonların token durumu kayboldu: nakde maliyetten değil, son bilinen değerden dönmek
+      // yanıltıcı olur. Pozisyonları "kurtarma" olarak kapatıyoruz: son bilinen değer üzerinden.
+      for (const p of d.positions || []) {
+        const w = this.wallets[p.strat];
+        if (!w) continue;
+        const v = p.lastValue || 0;
+        w.cash += v;
+        this.closed.push({
+          id: p.id, strat: p.strat, mint: p.mint, symbol: p.symbol, openedAt: p.openedAt, closedAt: now,
+          costSol: p.costSol, proceedsSol: p.proceeds + v, pnlSol: p.proceeds + v - p.costSol,
+          pnlPct: p.costSol > 0 ? (p.proceeds + v) / p.costSol - 1 : 0, feesSol: p.feesSol,
+          reason: 'sayfa yeniden açıldı (son değerle kapandı)', entryProg: p.entryProg,
+          holdSec: (now - p.openedAt) / 1000, exits: p.exits || [],
+        });
+      }
+      return true;
+    }
+  }
+
+  function dayKey(now) { const d = new Date(now); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
+
+  const API = { CURVE, price, progress, mcapSol, buyQuote, sellQuote, DEFAULT_SETTINGS, DEFAULT_FILTER,
+    Market, metrics, rugCheck, makeStrategies, stats, median, Engine };
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+  else root.TO = API;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Trade Office — arayüz, PumpPortal bağlantısı, kayıt. core.js'den sonra yüklenir. */
+(function () {
+  'use strict';
+  const TO = window.TO;
+  const LS_KEY = 'tradeOffice.v1';
+  const DEFAULT_WS = 'wss://pumpportal.fun/api/data';
+  const $ = (s, r) => (r || document).querySelector(s);
+  const esc = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const nf = (x, d) => (isFinite(x) ? x : 0).toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const sol = (x) => nf(x, 4);
+  const pct = (x) => (x >= 0 ? '+' : '') + nf(x * 100, 1) + '%';
+  const cls = (x) => (x > 0 ? 'pos' : x < 0 ? 'neg' : '');
+  const hm = (ts) => new Date(ts).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const dur = (s) => (s < 60 ? Math.round(s) + ' sn' : s < 3600 ? Math.floor(s / 60) + ' dk ' + Math.round(s % 60) + ' sn' : nf(s / 3600, 1) + ' sa');
+  const COLORS = { A: '#8b93a7', B: '#4f9dff', C: '#f2b84b' };
+
+  // ------------------------------------------------------------ durum
+  const log = [];
+  function note(kind, text) {
+    log.unshift({ t: Date.now(), kind, text });
+    if (log.length > 80) log.length = 80;
+  }
+
+  let wsUrl = DEFAULT_WS;
+  const engine = new TO.Engine({ now: Date.now(), hooks: { subscribe: (m) => tx.sub(m), unsubscribe: (m) => tx.unsub(m) }, onEvent });
+
+  function onEvent(ev) {
+    if (ev.type === 'open') note('open', `${ev.pos.strat} · ${esc(ev.pos.symbol)} alındı (${sol(ev.pos.costSol)} SOL)`);
+    else if (ev.type === 'buyFail') note('warn', `${ev.pos.strat} · ${esc(ev.pos.symbol)} alım başarısız: ${esc(ev.why)}`);
+    else if (ev.type === 'close') note(ev.rec.pnlSol >= 0 ? 'win' : 'loss',
+      `${ev.rec.strat} · ${esc(ev.rec.symbol)} kapandı ${pct(ev.rec.pnlPct)} (${esc(ev.rec.reason)})`);
+    else if (ev.type === 'partial') note('open', `${ev.pos.strat} · ${esc(ev.pos.symbol)} kısmi satış`);
+    else if (ev.type === 'halt') note('warn', `${ev.strat} günlük zarar limitine ulaştı, bugün durduruldu`);
+  }
+
+  // ------------------------------------------------------------ PumpPortal bağlantısı
+  const tx = {
+    ws: null, state: 'kapalı', want: false, backoff: 1000, lastMsg: 0, subs: new Set(),
+    pendSub: new Set(), pendUnsub: new Set(), msgs: [], err: '',
+    connect() {
+      this.want = true;
+      if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return;
+      this.state = 'bağlanıyor';
+      let ws;
+      try { ws = new WebSocket(wsUrl); } catch (e) { this.err = String(e.message || e); this.retry(); return; }
+      this.ws = ws;
+      ws.onopen = () => {
+        this.state = 'canlı'; this.backoff = 1000; this.err = ''; this.lastMsg = Date.now();
+        note('info', 'Canlı veriye bağlandı');
+        this.send({ method: 'subscribeNewToken' });
+        this.send({ method: 'subscribeMigration' });
+        const all = [...this.subs]; this.pendSub.clear();
+        for (let i = 0; i < all.length; i += 100) this.send({ method: 'subscribeTokenTrade', keys: all.slice(i, i + 100) });
+      };
+      ws.onmessage = (e) => {
+        const now = Date.now(); this.lastMsg = now; this.msgs.push(now);
+        let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+        if (m && m.errors) { this.err = String(m.errors).slice(0, 200); note('warn', 'Sunucu: ' + esc(this.err)); return; }
+        try { engine.ingest(m, now); } catch (err) { note('warn', 'İşleme hatası: ' + esc(err.message)); }
+      };
+      ws.onerror = () => { this.err = 'bağlantı hatası'; };
+      ws.onclose = (e) => {
+        this.ws = null;
+        if (this.state === 'canlı') note('warn', `Bağlantı koptu (kod ${e.code}), yeniden bağlanılıyor`);
+        this.state = 'koptu';
+        if (this.want) this.retry();
+      };
+    },
+    retry() { setTimeout(() => { if (this.want) this.connect(); }, this.backoff); this.backoff = Math.min(this.backoff * 2, 30000); },
+    close() { this.want = false; this.state = 'kapalı'; if (this.ws) try { this.ws.close(); } catch (_) {} },
+    send(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
+    sub(mints) { for (const m of mints) { this.subs.add(m); this.pendSub.add(m); this.pendUnsub.delete(m); } },
+    unsub(mints) { for (const m of mints) { this.subs.delete(m); this.pendSub.delete(m); this.pendUnsub.add(m); } },
+    flush() {
+      if (!this.ws || this.ws.readyState !== 1) return;
+      if (this.pendSub.size) { const k = [...this.pendSub]; this.pendSub.clear(); for (let i = 0; i < k.length; i += 100) this.send({ method: 'subscribeTokenTrade', keys: k.slice(i, i + 100) }); }
+      if (this.pendUnsub.size) { const k = [...this.pendUnsub]; this.pendUnsub.clear(); for (let i = 0; i < k.length; i += 100) this.send({ method: 'unsubscribeTokenTrade', keys: k.slice(i, i + 100) }); }
+    },
+    rate() { const now = Date.now(); this.msgs = this.msgs.filter((t) => now - t < 60000); return this.msgs.length; },
+  };
+
+  // ------------------------------------------------------------ kayıt
+  function save() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ engine: engine.serialize(), wsUrl, startedAt })); return true; }
+    catch (_) { return false; }
+  }
+  let startedAt = Date.now();
+  function load() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return false;
+      const d = JSON.parse(raw);
+      if (d.wsUrl) wsUrl = d.wsUrl;
+      if (d.startedAt) startedAt = d.startedAt;
+      const ok = engine.restore(d.engine, Date.now());
+      if (ok && d.engine.positions && d.engine.positions.length)
+        note('warn', `${d.engine.positions.length} açık pozisyon sayfa kapalıyken izlenemedi, son bilinen değerle kapatıldı`);
+      return ok;
+    } catch (_) { return false; }
+  }
+
+  // ------------------------------------------------------------ döngü
+  let running = false, lastLoop = Date.now(), pausedTotal = 0;
+  function loop() {
+    const now = Date.now();
+    const gap = now - lastLoop;
+    lastLoop = now;
+    if (gap > 5000 && running) {
+      pausedTotal += gap;
+      note('warn', `Sayfa ${dur(gap / 1000)} arka planda kaldı; bu sürede veri kaçmış olabilir`);
+    }
+    if (running) {
+      try { engine.tick(now); } catch (e) { note('warn', 'Motor hatası: ' + esc(e.message)); }
+      tx.flush();
+      if (tx.state === 'canlı' && now - tx.lastMsg > 30000) { note('warn', '30 sn veri gelmedi, yeniden bağlanılıyor'); try { tx.ws.close(); } catch (_) {} }
+    }
+  }
+  setInterval(loop, 250);
+  setInterval(() => { if (running) engine.sampleEquity(Date.now()); }, 30000);
+  setInterval(save, 5000);
+  setInterval(render, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { loop(); render(); } else save(); });
+  window.addEventListener('pagehide', save);
+
+  function start() {
+    running = true; tx.connect(); note('info', 'Trade Office başlatıldı');
+    if (!engine.equityHist.length) engine.sampleEquity(Date.now());
+    render();
+  }
+  function stop() { running = false; tx.close(); note('info', 'Durduruldu (açık pozisyonlar izlenmiyor)'); render(); }
+
+  // ------------------------------------------------------------ ekran açık tut
+  let wake = null;
+  async function toggleWake() {
+    try {
+      if (wake) { await wake.release(); wake = null; }
+      else if ('wakeLock' in navigator) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; render(); }); }
+      else note('warn', 'Bu tarayıcı ekranı açık tutmayı desteklemiyor');
+    } catch (e) { note('warn', 'Ekran açık tutulamadı: ' + esc(e.message)); }
+    render();
+  }
+
+  // ------------------------------------------------------------ dialog
+  function ask(text, okText, fn) {
+    const d = $('#dlg');
+    $('#dlgText').textContent = text; $('#dlgOk').textContent = okText;
+    d.hidden = false;
+    $('#dlgOk').onclick = () => { d.hidden = true; fn(); };
+    $('#dlgCancel').onclick = () => { d.hidden = true; };
+  }
+
+  // ------------------------------------------------------------ çizim
+  function drawEquity(canvas) {
+    const h = engine.equityHist, ctx = canvas.getContext('2d');
+    const W = canvas.clientWidth, H = canvas.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== W * dpr) { canvas.width = W * dpr; canvas.height = H * dpr; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const ids = engine.strategies.map((s) => s.id);
+    const start = engine.s.startBalanceSol;
+    const pts = h.concat([Object.assign({ t: Date.now() }, Object.fromEntries(ids.map((id) => [id, engine.equity(id)])))]);
+    let lo = start, hi = start;
+    for (const r of pts) for (const id of ids) { lo = Math.min(lo, r[id]); hi = Math.max(hi, r[id]); }
+    const pad = (hi - lo) * 0.1 || start * 0.02; lo -= pad; hi += pad;
+    const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, t0 + 1);
+    const X = (t) => 36 + (W - 44) * (t - t0) / (t1 - t0), Y = (v) => 8 + (H - 26) * (1 - (v - lo) / (hi - lo));
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.font = '10px system-ui'; ctx.fillStyle = '#7d8597';
+    for (let k = 0; k <= 3; k++) {
+      const v = lo + (hi - lo) * k / 3, y = Y(v);
+      ctx.beginPath(); ctx.moveTo(36, y); ctx.lineTo(W - 8, y); ctx.stroke();
+      ctx.fillText(nf(v, 2), 2, y + 3);
+    }
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.moveTo(36, Y(start)); ctx.lineTo(W - 8, Y(start)); ctx.stroke(); ctx.setLineDash([]);
+    for (const id of ids) {
+      ctx.strokeStyle = COLORS[id] || '#fff'; ctx.lineWidth = 2; ctx.beginPath();
+      pts.forEach((r, i) => { const x = X(r.t), y = Y(r[id]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#7d8597';
+    ctx.fillText(hm(t0), 36, H - 3);
+    const lbl = hm(t1); ctx.fillText(lbl, W - 8 - ctx.measureText(lbl).width, H - 3);
+  }
+
+  // ------------------------------------------------------------ sekmeler
+  let tab = 'ozet', tradeFilter = 'all';
+  function setTab(t) { tab = t; document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t)); render(true); }
+
+  function header() {
+    const st = tx.state, rate = tx.rate();
+    const dot = !running ? 'off' : st === 'canlı' ? 'live' : 'warn';
+    $('#status').innerHTML = `<span class="dot ${dot}"></span><b>${running ? esc(st) : 'durdu'}</b>
+      <span class="muted">${rate}/dk · ${engine.market.tokens.size} token · ${engine.positions.size} pozisyon</span>`;
+    $('#runBtn').textContent = running ? 'Durdur' : 'Başlat';
+    $('#runBtn').className = running ? 'btn ghost' : 'btn primary';
+    $('#killBtn').classList.toggle('on', engine.kill);
+    $('#killBtn').textContent = engine.kill ? 'Acil dur: AÇIK' : 'Acil dur';
+    $('#wakeBtn').classList.toggle('on', !!wake);
+  }
+
+  function vOzet() {
+    const cards = engine.strategies.map((st) => {
+      const w = engine.wallets[st.id], eq = engine.equity(st.id), s = TO.stats(engine.closed.filter((c) => c.strat === st.id));
+      const r = eq / w.start - 1;
+      const badge = w.halted ? '<span class="badge red">bugün durdu</span>' : !st.enabled ? '<span class="badge">kapalı</span>' : '';
+      return `<div class="card strat" style="--c:${COLORS[st.id]}">
+        <div class="row"><div class="sname">${esc(st.name)}</div>${badge}</div>
+        <div class="row"><div class="big">${sol(eq)} <small>SOL</small></div><div class="big ${cls(r)}">${pct(r)}</div></div>
+        <div class="grid4">
+          <div><span>İşlem</span><b>${s.n}</b></div><div><span>Kazanma</span><b>${nf(s.winRate * 100, 0)}%</b></div>
+          <div><span>Medyan</span><b class="${cls(s.medianPct)}">${pct(s.medianPct)}</b></div>
+          <div><span>Kâr faktörü</span><b>${s.profitFactor === Infinity ? '∞' : nf(s.profitFactor, 2)}</b></div>
+          <div><span>Açık</span><b>${engine.openCount(st.id)}</b></div><div><span>Maks düşüş</span><b>${nf(w.maxDD * 100, 1)}%</b></div>
+          <div><span>Ücret</span><b>${sol(w.fees)}</b></div><div><span>İlk 3 hariç</span><b class="${cls(s.withoutTop3Sol)}">${sol(s.withoutTop3Sol)}</b></div>
+        </div></div>`;
+    }).join('');
+    const legend = engine.strategies.map((s) => `<span><i style="background:${COLORS[s.id]}"></i>${esc(s.id)}</span>`).join('');
+    const ev = log.slice(0, 25).map((l) => `<li class="${l.kind}"><time>${hm(l.t)}</time>${l.text}</li>`).join('') || '<li class="muted">Henüz olay yok. Başlat\'a bas.</li>';
+    const runFor = running ? `Çalışma süresi: ${dur((Date.now() - startedAt) / 1000)} · sinyal ${engine.signals}` : '';
+    return `${!running && !engine.closed.length ? startHint() : ''}
+      <div class="card"><div class="row"><h3>Bakiye eğrisi</h3><div class="legend">${legend}</div></div>
+      <canvas id="eq" class="chart"></canvas><div class="muted small">${runFor}</div></div>
+      ${cards}
+      <div class="card"><h3>Olaylar</h3><ul class="events">${ev}</ul></div>`;
+  }
+
+  function startHint() {
+    return `<div class="card hint"><b>Demo modu.</b> Gerçek para kullanılmaz. Canlı pump.fun verisiyle her strateji ${nf(engine.s.startBalanceSol, 2)} SOL sanal bakiyeyle işlem yapar.
+      Ücretler, ${engine.s.latencyMs} ms gecikme ve %${nf(engine.s.failRate * 100, 0)} başarısız işlem hesaba katılır.
+      Sayfa yalnızca açık ve ön plandayken çalışır; "Ekran açık" düğmesi ekranın kapanmasını engeller.</div>`;
+  }
+
+  function vPoz() {
+    const now = Date.now();
+    const list = [...engine.positions.values()].sort((a, b) => b.id - a.id);
+    if (!list.length) return '<div class="card muted">Açık pozisyon yok.</div>';
+    return list.map((p) => {
+      const t = engine.market.get(p.mint), m = t ? TO.metrics(t, now) : null;
+      const pnlSol = p.status === 'open' ? p.lastValue + p.proceeds - p.costSol : 0;
+      return `<div class="card pcard" style="--c:${COLORS[p.strat]}">
+        <div class="row"><div><b>${esc(p.symbol)}</b> <span class="muted">${p.strat}</span></div>
+          <div class="big ${cls(p.pnlPct)}">${p.status === 'open' ? pct(p.pnlPct) : 'dolum bekliyor'}</div></div>
+        <div class="grid4">
+          <div><span>Maliyet</span><b>${sol(p.costSol)}</b></div><div><span>Değer</span><b>${sol(p.lastValue + p.proceeds)}</b></div>
+          <div><span>K/Z</span><b class="${cls(pnlSol)}">${sol(pnlSol)}</b></div><div><span>Süre</span><b>${p.openedAt ? dur((now - p.openedAt) / 1000) : '—'}</b></div>
+          <div><span>Curve</span><b>${m ? nf(m.progress * 100, 0) + '%' : '—'}</b></div><div><span>Alıcı</span><b>${m ? m.uniqueBuyers : '—'}</b></div>
+          <div><span>Net 60sn</span><b class="${cls(m ? m.w60.net : 0)}">${m ? nf(m.w60.net, 2) : '—'}</b></div><div><span>Durum</span><b>${p.closing ? 'satılıyor' : p.partialDone ? 'kısmi' : p.status === 'open' ? 'açık' : 'bekliyor'}</b></div>
+        </div>
+        <div class="row"><a class="link" href="https://pump.fun/coin/${encodeURIComponent(p.mint)}" target="_blank" rel="noopener">pump.fun'da aç</a>
+          ${p.status === 'open' && !p.closing ? `<button class="btn ghost sm" data-sell="${p.id}">Şimdi sat</button>` : ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function vIslem() {
+    const rows = engine.closed.filter((c) => tradeFilter === 'all' || c.strat === tradeFilter).slice(-200).reverse();
+    const chips = ['all', ...engine.strategies.map((s) => s.id)].map((id) =>
+      `<button class="chip ${tradeFilter === id ? 'on' : ''}" data-tf="${id}">${id === 'all' ? 'Tümü' : id}</button>`).join('');
+    const rep = engine.strategies.map((st) => {
+      const s = TO.stats(engine.closed.filter((c) => c.strat === st.id));
+      return `<tr><td><i class="sw" style="background:${COLORS[st.id]}"></i>${st.id}</td><td>${s.n}</td><td>${nf(s.winRate * 100, 0)}%</td>
+        <td class="${cls(s.avgPct)}">${pct(s.avgPct)}</td><td class="${cls(s.medianPct)}">${pct(s.medianPct)}</td>
+        <td>${s.profitFactor === Infinity ? '∞' : nf(s.profitFactor, 2)}</td><td class="${cls(s.expectancySol)}">${nf(s.expectancySol, 4)}</td>
+        <td class="${cls(s.totalSol)}">${sol(s.totalSol)}</td></tr>`;
+    }).join('');
+    const list = rows.map((c) => `<li><div class="row"><div><b>${esc(c.symbol)}</b> <span class="muted">${c.strat} · ${hm(c.closedAt)}</span></div>
+        <div class="${cls(c.pnlSol)}"><b>${pct(c.pnlPct)}</b> <small>${sol(c.pnlSol)}</small></div></div>
+        <div class="muted small">${esc(c.reason)} · ${dur(c.holdSec)} · giriş curve ${nf((c.entryProg || 0) * 100, 0)}% · ücret ${sol(c.feesSol)}</div></li>`).join('')
+      || '<li class="muted">Henüz kapanmış işlem yok.</li>';
+    const rej = engine.strategies.map((st) => {
+      const r = Object.entries(engine.rejects[st.id] || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      return r.length ? `<div class="small"><b>${st.id}:</b> ${r.map(([k, v]) => `${esc(k)} ${v}`).join(' · ')}</div>` : '';
+    }).join('');
+    return `<div class="card"><h3>Strateji raporu</h3><div class="scroll"><table>
+        <tr><th></th><th>İşlem</th><th>Kaz.</th><th>Ort.</th><th>Medyan</th><th>KF</th><th>Beklenti</th><th>Toplam</th></tr>${rep}</table></div>
+        <div class="muted small">KF: kâr faktörü. Beklenti: işlem başı ortalama SOL. Ücretler dahil.</div></div>
+      <div class="card"><h3>Elenen sinyaller</h3>${rej || '<div class="muted small">Henüz yok.</div>'}</div>
+      <div class="card"><div class="chips">${chips}</div><ul class="trades">${list}</ul></div>`;
+  }
+
+  function vAkis() {
+    const now = Date.now();
+    const toks = [...engine.market.tokens.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 40);
+    if (!toks.length) return `<div class="card muted">${running ? 'Yeni token bekleniyor…' : 'Akışı görmek için Başlat\'a bas.'}</div>`;
+    return `<div class="card"><h3>Canlı token akışı</h3><ul class="feed">${toks.map((t) => {
+      const m = TO.metrics(t, now), rug = TO.rugCheck(t, m, engine.filter);
+      const held = engine.hasPosition(t.mint);
+      return `<li class="${held ? 'held' : ''}"><div class="row"><div><b>${esc(t.symbol || '?')}</b> <span class="muted">${esc(t.name)}</span></div>
+          <div class="muted small">${dur(m.age)}</div></div>
+        <div class="bar"><i style="width:${nf(m.progress * 100, 1).replace(',', '.')}%"></i></div>
+        <div class="muted small">curve ${nf(m.progress * 100, 0)}% · ${m.uniqueBuyers} alıcı · net60 <span class="${cls(m.w60.net)}">${nf(m.w60.net, 2)}</span> SOL
+          · ilk10 ${nf(m.top10 * 100, 0)}% · ${t.migrated ? '<b>mezun</b>' : rug ? '<span class="neg">' + esc(rug) + '</span>' : '<span class="pos">filtre temiz</span>'}${held ? ' · <b>pozisyonda</b>' : ''}</div></li>`;
+    }).join('')}</ul></div>`;
+  }
+
+  function field(group, key, val, label) {
+    return `<label class="f"><span>${esc(label || key)}</span><input inputmode="decimal" data-g="${group}" data-k="${esc(key)}" value="${esc(val)}"></label>`;
+  }
+  const LABELS = {
+    startBalanceSol: 'Başlangıç bakiyesi (SOL)', tradeSizeSol: 'İşlem başı tutar (SOL)', latencyMs: 'Gecikme (ms)', failRate: 'Başarısız işlem oranı',
+    pumpFee: 'pump.fun ücreti', portalFee: 'PumpPortal ücreti', baseFeeSol: 'Ana ağ ücreti (SOL)', priorityFeeSol: 'Priority fee (SOL)',
+    maxSlippage: 'Maks kayma', maxOpenPerStrategy: 'Strateji başı maks açık', dailyLossPct: 'Günlük zarar limiti', migrationHaircut: 'Mezuniyet kesintisi',
+    trackMinutes: 'Token izleme süresi (dk)', maxTracked: 'Maks izlenen token', earlyWindowMs: 'Erken alım penceresi (ms)', sellRetries: 'Satış tekrar sayısı',
+    maxTop10: 'Maks ilk 10 payı', maxDevShare: 'Maks dev payı', maxDevSoldFrac: 'Maks dev satış oranı', maxEarlyShare: 'Maks erken/bundle payı', maxDevInitialSol: 'Maks dev açılış alımı (SOL)',
+  };
+  function vAyar() {
+    const g = Object.keys(engine.s).map((k) => field('s', k, engine.s[k], LABELS[k])).join('');
+    const f = Object.keys(engine.filter).map((k) => field('f', k, engine.filter[k], LABELS[k])).join('');
+    const st = engine.strategies.map((s) => `<div class="card"><div class="row"><h3>${esc(s.name)}</h3>
+        <label class="sw2"><input type="checkbox" data-en="${s.id}" ${s.enabled ? 'checked' : ''}><span>açık</span></label></div>
+        <div class="muted small">${esc(s.desc)}</div>
+        <div class="form">${Object.keys(s.params).map((k) => field('p:' + s.id, k, s.params[k])).join('')}</div></div>`).join('');
+    return `<div class="card"><h3>Genel</h3><div class="form">${g}</div>
+        <label class="f wide"><span>Veri adresi (WebSocket)</span><input data-g="ws" data-k="url" value="${esc(wsUrl)}"></label>
+        <div class="muted small">Oranlar ondalık yazılır: 0.0125 = %1,25. Bakiye değişikliği "Sıfırla" sonrası geçerli olur.</div></div>
+      <div class="card"><h3>Rug filtresi (ortak)</h3><div class="form">${f}</div></div>
+      ${st}
+      <div class="card"><div class="btns">
+        <button class="btn primary" id="saveSet">Ayarları uygula</button>
+        <button class="btn ghost" id="copyBtn">Sonuçları kopyala (JSON)</button>
+        <button class="btn danger" id="resetBtn">Her şeyi sıfırla</button></div>
+        <div class="muted small" id="setMsg"></div></div>`;
+  }
+
+  function applySettings() {
+    let bad = 0;
+    document.querySelectorAll('#view input[data-g]').forEach((inp) => {
+      const g = inp.dataset.g, k = inp.dataset.k, raw = inp.value.trim().replace(',', '.');
+      if (g === 'ws') { if (/^wss?:\/\//.test(raw)) wsUrl = raw; else bad++; return; }
+      const v = Number(raw);
+      if (!isFinite(v) || v < 0) { bad++; inp.classList.add('bad'); return; }
+      inp.classList.remove('bad');
+      if (g === 's') engine.s[k] = v;
+      else if (g === 'f') engine.filter[k] = v;
+      else if (g.startsWith('p:')) { const s = engine.strategies.find((x) => x.id === g.slice(2)); if (s) s.params[k] = v; }
+    });
+    document.querySelectorAll('#view input[data-en]').forEach((c) => { const s = engine.strategies.find((x) => x.id === c.dataset.en); if (s) s.enabled = c.checked; });
+    save();
+    $('#setMsg').textContent = bad ? `${bad} alan geçersiz, değiştirilmedi.` : 'Uygulandı ve kaydedildi.';
+    note('info', 'Ayarlar güncellendi');
+  }
+
+  function resetAll() {
+    const keepS = Object.assign({}, engine.s), keepF = Object.assign({}, engine.filter);
+    const keepP = engine.strategies.map((s) => ({ id: s.id, enabled: s.enabled, params: Object.assign({}, s.params) }));
+    engine.positions.clear(); engine.queue = []; engine.closed = []; engine.equityHist = []; engine.signals = 0; engine.kill = false;
+    engine.rejSeen = new Set();
+    Object.assign(engine.s, keepS); Object.assign(engine.filter, keepF);
+    for (const p of keepP) { const s = engine.strategies.find((x) => x.id === p.id); s.enabled = p.enabled; s.params = p.params; }
+    for (const s of engine.strategies) engine.resetWallet(s.id, Date.now());
+    for (const t of engine.market.tokens.values()) { t.shadowSol = 0; t.shadowTok = 0; }
+    startedAt = Date.now(); engine.sampleEquity(Date.now());
+    save(); note('info', 'Tüm demo sonuçları sıfırlandı'); render(true);
+  }
+
+  let lastTab = '';
+  function render(force) {
+    header();
+    const view = $('#view');
+    if (tab === 'ayar' && lastTab === 'ayar' && !force) return;   // form yazılırken bozulmasın
+    const y = window.scrollY;
+    view.innerHTML = tab === 'ozet' ? vOzet() : tab === 'poz' ? vPoz() : tab === 'islem' ? vIslem() : tab === 'akis' ? vAkis() : vAyar();
+    lastTab = tab;
+    const c = $('#eq'); if (c) drawEquity(c);
+    if (!force) window.scrollTo(0, y);
+  }
+
+  // ------------------------------------------------------------ olaylar
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.tab) return setTab(b.dataset.tab);
+    if (b.dataset.tf) { tradeFilter = b.dataset.tf; return render(true); }
+    if (b.dataset.sell) {
+      const p = engine.positions.get(Number(b.dataset.sell));
+      if (p && p.status === 'open' && !p.closing) { engine.placeSell(p, 1, 'elle satış', Date.now(), false); note('info', `${esc(p.symbol)} elle satışa gönderildi`); }
+      return render();
+    }
+    if (b.id === 'runBtn') return running ? stop() : start();
+    if (b.id === 'killBtn') {
+      if (engine.kill) { engine.killSwitch(false, Date.now()); note('info', 'Acil durdurma kapatıldı'); return render(); }
+      return ask('Tüm açık pozisyonlar satılsın ve yeni giriş durdurulsun mu?', 'Evet, acil dur', () => { engine.killSwitch(true, Date.now()); note('warn', 'ACİL DURDURMA'); render(); });
+    }
+    if (b.id === 'wakeBtn') return toggleWake();
+    if (b.id === 'saveSet') return applySettings();
+    if (b.id === 'resetBtn') return ask('Tüm demo işlemler, bakiyeler ve geçmiş silinsin mi? Ayarlar korunur.', 'Evet, sıfırla', resetAll);
+    if (b.id === 'copyBtn') {
+      const data = JSON.stringify({ exportedAt: new Date().toISOString(), settings: engine.s, filter: engine.filter,
+        strategies: engine.strategies.map((s) => ({ id: s.id, params: s.params, stats: TO.stats(engine.closed.filter((c) => c.strat === s.id)) })),
+        closed: engine.closed }, null, 1);
+      navigator.clipboard.writeText(data).then(() => { $('#setMsg').textContent = `Kopyalandı (${engine.closed.length} işlem).`; },
+        () => { $('#setMsg').textContent = 'Kopyalanamadı; tarayıcı izin vermedi.'; });
+    }
+  });
+  window.addEventListener('resize', () => { const c = $('#eq'); if (c) drawEquity(c); });
+
+  load();
+  render(true);
+  window.__TO_DEBUG = { engine, tx, start, stop, setTab };
+})();
+</script>
+</body>
+</html>
